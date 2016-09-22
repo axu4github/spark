@@ -91,15 +91,17 @@ abstract class AbstractCommandBuilder {
     List<String> cmd = new ArrayList<>();
     String envJavaHome;
 
+    // - MacOSX cmd.add("/Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/jre/bin/java")
     if (javaHome != null) {
       cmd.add(join(File.separator, javaHome, "bin", "java"));
     } else if ((envJavaHome = System.getenv("JAVA_HOME")) != null) {
-        cmd.add(join(File.separator, envJavaHome, "bin", "java"));
+      cmd.add(join(File.separator, envJavaHome, "bin", "java"));
     } else {
-        cmd.add(join(File.separator, System.getProperty("java.home"), "bin", "java"));
+      cmd.add(join(File.separator, System.getProperty("java.home"), "bin", "java"));
     }
 
     // Load extra JAVA_OPTS from conf/java-opts, if it exists.
+    // 判断 ${SPARK_HOME}/conf/java-opts 文件是否存在，若存在则读取该文件，将其内容设置到cmd(List)中
     File javaOpts = new File(join(File.separator, getConfDir(), "java-opts"));
     if (javaOpts.isFile()) {
       BufferedReader br = new BufferedReader(new InputStreamReader(
@@ -115,6 +117,11 @@ abstract class AbstractCommandBuilder {
     }
 
     cmd.add("-cp");
+
+    // 调用 this.buildClassPath()
+    // File.pathSeparator => ":"
+    // join(File.pathSeparator, buildClassPath(extraClassPath)) 
+    //    => ${SPARK_CLASSPATH}:${SPARK_CONF_DIR}:${jarDirs}:${HADOOP_CONF_DIR}:${YARN_CONF_DIR}:${SPARK_DIST_CLASSPATH}
     cmd.add(join(File.pathSeparator, buildClassPath(extraClassPath)));
     return cmd;
   }
@@ -133,9 +140,13 @@ abstract class AbstractCommandBuilder {
    * specifically, with trailing slashes for directories).
    */
   List<String> buildClassPath(String appClassPath) throws IOException {
+    // 调用this.getSparkHome()
     String sparkHome = getSparkHome();
 
     List<String> cp = new ArrayList<>();
+
+    // 调用 this.addToClassPath()
+    // 调用 this.getenv()
     addToClassPath(cp, getenv("SPARK_CLASSPATH"));
     addToClassPath(cp, appClassPath);
 
@@ -192,6 +203,10 @@ abstract class AbstractCommandBuilder {
     // propagate the test classpath appropriately. For normal invocation, look for the jars
     // directory under SPARK_HOME.
     boolean isTestingSql = "1".equals(getenv("SPARK_SQL_TESTING"));
+
+    // 调用 CommandBuilderUtils。findJarsDir() 同spark逻辑一样：
+    //   - 若存在${SPARK_HOME}/RELEASE 文件，则jarsDir => ${SPARK_HOME}/jars
+    //   - 若不存在，则jarsDir => ${SPARK_HOME}/assembly/target/${SPARK_SCALA_VERSION}/jars
     String jarsDir = findJarsDir(getSparkHome(), getScalaVersion(), !isTesting && !isTestingSql);
     if (jarsDir != null) {
       addToClassPath(cp, join(File.separator, jarsDir, "*"));
@@ -251,6 +266,8 @@ abstract class AbstractCommandBuilder {
   }
 
   String getenv(String key) {
+    // 变量 childEnv
+    // 调用 CommandBuilderUtils.firstNonEmpty() 返回第一个不空的值
     return firstNonEmpty(childEnv.get(key), System.getenv(key));
   }
 

@@ -22,18 +22,22 @@
 # conf/ subdirectory.
 
 # Figure out where Spark is installed
+echo "axu.print [Log] [19,38,3(bin/spark-class)] [bin/load-spark-env.sh] 判断如果SPARK_HOME为空，则设置sbin的父目录为${SPARK_HOME}"
 if [ -z "${SPARK_HOME}" ]; then
   export SPARK_HOME="$(cd "`dirname "$0"`"/..; pwd)"
 fi
 
+echo "axu.print [Log] [20,39,4(bin/spark-class)] [bin/load-spark-env.sh] 判断是否已经加载过环境变量，若没有加载过(SPARK_ENV_LOADED为空)，则设置SPARK_ENV_LOADED=1，并判断如果有${SPARK_CONF_DIR}/spark-env.sh文件，讲文件中所有声明的变量全部设置为环境变量"
 if [ -z "$SPARK_ENV_LOADED" ]; then
   export SPARK_ENV_LOADED=1
+  echo "axu.print [bin/load-spark-env.sh] [Define Global] SPARK_ENV_LOADED: [${SPARK_ENV_LOADED}]"
 
   # Returns the parent of the directory this script lives in.
   parent_dir="${SPARK_HOME}"
 
   user_conf_dir="${SPARK_CONF_DIR:-"$parent_dir"/conf}"
 
+  # -f 判断文件是否存在
   if [ -f "${user_conf_dir}/spark-env.sh" ]; then
     # Promote all variable declarations to environment (exported) variables
     set -a
@@ -43,7 +47,7 @@ if [ -z "$SPARK_ENV_LOADED" ]; then
 fi
 
 # Setting SPARK_SCALA_VERSION if not already set.
-
+echo "axu.print [Log] [21,40,5(bin/spark-class)] [bin/load-spark-env.sh] 设置SPARK_SCALA_VERSION"
 if [ -z "$SPARK_SCALA_VERSION" ]; then
 
   ASSEMBLY_DIR2="${SPARK_HOME}/assembly/target/scala-2.11"
@@ -61,3 +65,4 @@ if [ -z "$SPARK_SCALA_VERSION" ]; then
     export SPARK_SCALA_VERSION="2.10"
   fi
 fi
+echo "axu.print [bin/load-spark-env.sh] [Define Global] SPARK_SCALA_VERSION: [${SPARK_SCALA_VERSION}]"

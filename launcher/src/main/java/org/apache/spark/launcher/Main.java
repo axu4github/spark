@@ -48,13 +48,19 @@ class Main {
    * script.
    */
   public static void main(String[] argsArray) throws Exception {
+    // CommandBuilderUtils.checkArgument() 判断获取参数数量，若没有参数则报提示错误
     checkArgument(argsArray.length > 0, "Not enough arguments: missing class name.");
 
     List<String> args = new ArrayList<>(Arrays.asList(argsArray));
+
+    // 获取第一个参数
     String className = args.remove(0);
 
+    // CommandBuilderUtils.isEmpty() 判断是否设置全局变量 SPARK_PRINT_LAUNCH_COMMAND
     boolean printLaunchCommand = !isEmpty(System.getenv("SPARK_PRINT_LAUNCH_COMMAND"));
     AbstractCommandBuilder builder;
+
+    // 如果是提交操作
     if (className.equals("org.apache.spark.deploy.SparkSubmit")) {
       try {
         builder = new SparkSubmitCommandBuilder(args);
@@ -78,13 +84,28 @@ class Main {
         help.add(parser.USAGE_ERROR);
         builder = new SparkSubmitCommandBuilder(help);
       }
+
+    // 如果是其他（启动/停止/...）操作
     } else {
-      builder = new SparkClassCommandBuilder(className, args);
+        // SparkClassCommandBuilder 类也继承 AbstractCommandBuilder
+        // 调用SparkClassCommandBuilder()
+        builder = new SparkClassCommandBuilder(className, args);
     }
 
     Map<String, String> env = new HashMap<>();
+
+    // 调用SparkClassCommandBuilder.buildCommand()
     List<String> cmd = builder.buildCommand(env);
     if (printLaunchCommand) {
+      // Spark Command: 
+      // /Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/bin/java 
+      //  -cp 
+      //  /Users/axu/code/axuProject/spark-2.0.0-hadoop2.4/conf/:/Users/axu/code/axuProject/spark-2.0.0-hadoop2.4/assembly/target/scala-2.11/jars/* 
+      //  -Xmx1g 
+      //  -XX:MaxPermSize=256m 
+      //  org.apache.spark.deploy.master.Master 
+      //  --host axu4iMac.local --port 7077 --webui-port 8080
+      System.err.println(" --- axu.print ---");
       System.err.println("Spark Command: " + join(" ", cmd));
       System.err.println("========================================");
     }
@@ -93,7 +114,22 @@ class Main {
       System.out.println(prepareWindowsCommand(cmd, env));
     } else {
       // In bash, use NULL as the arg separator since it cannot be used in an argument.
+      // cmd(List)组成：
+      //   - 调用 buildJavaCommand()
+      //     - ${JAVA_HOME}/bin/java
+      //     - 若 ${SPARK_HOME}/conf/java-opts 存在，将文件设置的内容加入
+      //     - "-cp"
+      //     - 调用 buildClassPath() 
+      //       - ${SPARK_CLASSPATH}:${SPARK_CONF_DIR}:${jarDirs}:${HADOOP_CONF_DIR}:${YARN_CONF_DIR}:${SPARK_DIST_CLASSPATH}
+      //   - ${javaOptsKeys(List)}
+      //   - "-Xmx" + ${memKey变量值}|DEFAULT_MEM 
+      //   - 调用 addPermGenSizeOpt()
+      //     - "-XX:MaxPermSize=256m"
+      //   - className变量值
+      //   - classArgs变量值
       List<String> bashCmd = prepareBashCommand(cmd, env);
+
+      // 依次将cmd(List)输出到终端上，使用'\0'分割
       for (String c : bashCmd) {
         System.out.print(c);
         System.out.print('\0');

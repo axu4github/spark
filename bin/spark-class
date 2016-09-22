@@ -17,13 +17,38 @@
 # limitations under the License.
 #
 
+# 开始调用java程序
+# nohup nice -n 0 ${SPARK_HOME/}bin/spark-class org.apache.spark.deploy.master.Master --host $(hostname) --port 7077 --webui-port 8080 >> ${SPARK_HOME}/logs/spark-axu-org.apache.spark.deploy.master.Master-1-axu4iMac.local.out 2>&1 < /dev/null &
+
+echo "axu.print [Log] [1] [bin/spark-class] 判断如果SPARK_HOME为空，则设置sbin的父目录为${SPARK_HOME}"
+# - 调用关系1：
+#   - sbin/start-all.sh
+#     - sbin/start-master.sh
+#       - sbin/spark-daemon.sh
+#         - 执行 ${SPARK_HOME}/bin/spark-class "org.apache.spark.deploy.master.Master" \
+#                                              --host $SPARK_MASTER_HOST \ 
+#                                              --port $SPARK_MASTER_PORT \
+#                                              --webui-port $SPARK_MASTER_WEBUI_PORT \
+#                                              $ORIGINAL_ARGS（该值为空，在sbin/start-master.sh 通过 ORIGINAL_ARGS="$@"设置，因为sbin/start-all.sh调用sbin/start-master.sh时，未加参数，所以为空）
+
 if [ -z "${SPARK_HOME}" ]; then
   export SPARK_HOME="$(cd "`dirname "$0"`"/..; pwd)"
 fi
 
+echo "axu.print [Log] [2] [bin/spark-class] 调用${SPARK_HOME}/bin/load-spark-env.sh"
+echo "axu.print [bin/spark-class] <in> [bin/load-spark-env.sh]. <=== "
+# - 1.设置 ${SPARK_HOME} 默认为sbin父目录
+# - 2.设置 conf/spark-env.sh (若文件存在) 所有变量为系统变量
+# - 3.设置 ${SPARK_SCALA_VERSION}，通过编译结果的assembly/target/scala-2.x目录是否存在
 . "${SPARK_HOME}"/bin/load-spark-env.sh
+echo "axu.print [bin/spark-class] <out> [bin/load-spark-env.sh]. ===>"
 
+echo "axu.print [Log] [6] [bin/spark-class] 若全局变量JAVA_HOME存在，则设置RUNNER为${JAVA_HOME}/bin/java，否则若java可直接使用，则设置RUNNER为java，否则报错"
 # Find the java binary
+# - 定义变量${RUNNER}
+# - 若${JAVA_HOME}不为空，则RUNNER="${JAVA_HOME}/bin/java"
+# - 若为空，则RUNNER="$(command -v java)"
+# - 若$(command -v java)没有值则报错
 if [ -n "${JAVA_HOME}" ]; then
   RUNNER="${JAVA_HOME}/bin/java"
 else
@@ -34,14 +59,32 @@ else
     exit 1
   fi
 fi
+echo "axu.print [bin/spark-class] [Debug] RUNNER: [${RUNNER}]"
 
+echo "axu.print [Log] [7] [bin/spark-class] 若SPARK_HOME/RELEASE文件存在，则设置SPARK_JARS_DIR为${SPARK_HOME}/jars，否则为${SPARK_HOME}/assembly/target/scala-$SPARK_SCALA_VERSION/jars"
 # Find Spark jars.
+# 
+# - 定义变量${SPARK_JARS_DIR}
+# - ${SPARK_HOME}/RELEASE（该文件内容是描述编译spark信息）
+# - 例：spark-2.0.0官方编译版本(Pre-build for Hadoop 2.7 and later) RELEASE文件内容如下
+#   ```
+#   Spark 2.0.0 built for Hadoop 2.7.2
+#   Build flags: -Psparkr -Phadoop-2.7 -Phive -Phive-thriftserver -Pyarn -DzincPort=3036
+#   ```
+# - 若${SPARK_HOME}/RELEASE 文件存在，则为 ${SPARK_HOME}/jars
+# - 若不存在，则为${SPARK_HOME}/assembly/target/scala-$SPARK_SCALA_VERSION/jars
+#   - 其中${SPARK_SCALA_VERSION}变量在"${SPARK_HOME}"/bin/load-spark-env.sh文件中声明
+# 
 if [ -f "${SPARK_HOME}/RELEASE" ]; then
   SPARK_JARS_DIR="${SPARK_HOME}/jars"
 else
   SPARK_JARS_DIR="${SPARK_HOME}/assembly/target/scala-$SPARK_SCALA_VERSION/jars"
 fi
+echo "axu.print [bin/spark-class] [Debug] SPARK_JARS_DIR: [${SPARK_JARS_DIR}]"
 
+echo "axu.print [Log] [8] [bin/spark-class] 若不是测试环境则设置LAUNCH_CLASSPATH为$SPARK_JARS_DIR/*"
+# - #!# $SPARK_TESTING$SPARK_SQL_TESTING 变量之前没有声明 
+# - 设置变量${LAUNCH_CLASSPATH}
 if [ ! -d "$SPARK_JARS_DIR" ] && [ -z "$SPARK_TESTING$SPARK_SQL_TESTING" ]; then
   echo "Failed to find Spark jars directory ($SPARK_JARS_DIR)." 1>&2
   echo "You need to build Spark with the target \"package\" before running this program." 1>&2
@@ -49,13 +92,29 @@ if [ ! -d "$SPARK_JARS_DIR" ] && [ -z "$SPARK_TESTING$SPARK_SQL_TESTING" ]; then
 else
   LAUNCH_CLASSPATH="$SPARK_JARS_DIR/*"
 fi
+echo "axu.print [bin/spark-class] [Debug] LAUNCH_CLASSPATH: [${LAUNCH_CLASSPATH}]"
 
+# - 20160818 -
+# - 日志 -
+# - 18:30（到家）- 20:00 休息
+# - 20:10 - 20:35 1个番茄，bin/spark-class 源码阅读
+# - 20:35 - 20:40 1组（20个）俯卧撑-第二式，1组（30个）蹲起-第四式
+# - 20:40 - 22:58 接媳妇，吃饭，休息，1组（20个）俯卧撑-第二式
+# - 22:58 - 23:24 1个番茄，bin/spark-class 源码阅读
+# - 23:24 - 23:29 1组（20个）俯卧撑-第二式，1组（30个）蹲起-第四式
+# - 23:35 - 23:59 腹肌撕裂者
+
+echo "axu.print [Log] [9] [bin/spark-class] 若全局变量SPARK_PREPEND_CLASSES不为空，则将${SPARK_HOME}/launcher/target/scala-$SPARK_SCALA_VERSION/classes加入LAUNCH_CLASSPATH中"
 # Add the launcher build dir to the classpath if requested.
+# - 如果${SPARK_PREPEND_CLASSES}不为空，则将${SPARK_HOME}/launcher/target/scala-$SPARK_SCALA_VERSION/classes加入${LAUNCH_CLASSPATH}
 if [ -n "$SPARK_PREPEND_CLASSES" ]; then
   LAUNCH_CLASSPATH="${SPARK_HOME}/launcher/target/scala-$SPARK_SCALA_VERSION/classes:$LAUNCH_CLASSPATH"
 fi
+echo "axu.print [bin/spark-class] [Debug] LAUNCH_CLASSPATH: [${LAUNCH_CLASSPATH}]"
 
+echo "axu.print [Log] [10] [bin/spark-class] 若全局变量SPARK_TESTING不为空，则移除YARN_CONF_DIR和HADOOP_CONF_DIR环境变量"
 # For tests
+# - 如果${SPARK_TESGTING}不为空，则移除YARN_CONF_DIR和HADOOP_CONF_DIR环境变量
 if [[ -n "$SPARK_TESTING" ]]; then
   unset YARN_CONF_DIR
   unset HADOOP_CONF_DIR
@@ -67,16 +126,36 @@ fi
 #
 # The exit code of the launcher is appended to the output, so the parent shell removes it from the
 # command array and checks the value to see if the launcher succeeded.
+# - java -Xmx128m -cp "${SPARK_HOME}/assembly/target/scala-$SPARK_SCALA_VERSION/jars" \
+#                     "org.apache.spark.launcher.Main" \
+#                     "org.apache.spark.deploy.master.Master" \
+#                     --host $SPARK_MASTER_HOST \ 
+#                     --port $SPARK_MASTER_PORT \
+#                     --webui-port $SPARK_MASTER_WEBUI_PORT \
+#                  
 build_command() {
   "$RUNNER" -Xmx128m -cp "$LAUNCH_CLASSPATH" org.apache.spark.launcher.Main "$@"
   printf "%d\0" $?
 }
+
+echo "axu.print [Log] [11] [bin/spark-class] 调用build_command方法，并通过方法输出结果，设置CMD变量"
+echo "axu.print [Log] [12] [bin/spark-class] [function:build_command] 执行java命令 "
+echo "axu.print [bin/spark-class] [function:build_command] <in> [$@]. <=== "
+echo "axu.print [bin/spark-class] [function:build_command] [Command] [$RUNNER -Xmx128m -cp $LAUNCH_CLASSPATH org.apache.spark.launcher.Main $@]" 
+
+# CMD 组成：
+# - "$RUNNER" -Xmx128m -cp "$LAUNCH_CLASSPATH" org.apache.spark.launcher.Main "$@" 中 System.out.print 的内容
+# - "$RUNNER" -Xmx128m -cp "$LAUNCH_CLASSPATH" org.apache.spark.launcher.Main "$@" 命令的执行结果
 
 CMD=()
 while IFS= read -d '' -r ARG; do
   CMD+=("$ARG")
 done < <(build_command "$@")
 
+echo "axu.print [bin/spark-class] [function:build_command] <out> [java]. ===> "
+echo "axu.print [bin/spark-class] [Debug] CMD: [${CMD[@]}]"
+
+echo "axu.print [Log] [13] [bin/spark-class] 通过截取CMD的最后一位字符（在执行build_command()时，最后执行的printf方法）获得执行org.apache.spark.launcher.Main的结果。"
 COUNT=${#CMD[@]}
 LAST=$((COUNT - 1))
 LAUNCHER_EXIT_CODE=${CMD[$LAST]}
@@ -89,9 +168,21 @@ if ! [[ $LAUNCHER_EXIT_CODE =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
+echo "axu.print [Log] [14] [bin/spark-class] 如果执行org.apache.spark.launcher.Main命令不成功，则直接退出。" 
 if [ $LAUNCHER_EXIT_CODE != 0 ]; then
   exit $LAUNCHER_EXIT_CODE
 fi
 
+echo "axu.print [Log] [15] [bin/spark-class] 如果执行org.apache.spark.launcher.Main命令成功，则对CMD去除最后一位后执行CMD命令。" 
 CMD=("${CMD[@]:0:$LAST}")
+
+# CMD内容：
+# /Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/bin/java 
+# -cp 
+# /Users/axu/code/axuProject/spark-2.0.0-hadoop2.4/conf/:/Users/axu/code/axuProject/spark-2.0.0-hadoop2.4/assembly/target/scala-2.11/jars/* 
+# -Xmx1g 
+# -XX:MaxPermSize=256m 
+# org.apache.spark.deploy.master.Master 
+# --host axu4iMac.local --port 7077 --webui-port 8080
+echo "axu.print [bin/spark-class] [Debug] CMD: [${CMD[@]}]"
 exec "${CMD[@]}"

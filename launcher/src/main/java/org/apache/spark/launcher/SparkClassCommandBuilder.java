@@ -80,8 +80,13 @@ class SparkClassCommandBuilder extends AbstractCommandBuilder {
       memKey = "SPARK_DRIVER_MEMORY";
     }
 
+    // 调用 AbstractCommandBuilder.buildJavaCommand()
     List<String> cmd = buildJavaCommand(extraClassPath);
 
+    // 如果设置了javaOptsKeys中的全局变量，那么就将其中的全局变量依次加入到cmd列表中
+    // - org.apache.spark.deploy.master.Master
+    //   - javaOptsKeys => ['SPARK_DAEMON_JAVA_OPTS', 'SPARK_MASTER_OPTS']
+    //   - memKey => 'SPARK_DAEMON_MEMORY'
     for (String key : javaOptsKeys) {
       String envValue = System.getenv(key);
       if (!isEmpty(envValue) && envValue.contains("Xmx")) {
@@ -92,11 +97,27 @@ class SparkClassCommandBuilder extends AbstractCommandBuilder {
       addOptionString(cmd, envValue);
     }
 
+    // 如果 设置了全局变量 memKey 则 设置 -Xmx ${memKey} 否则 设置 -Xmx DEFAULT_MEM
     String mem = firstNonEmpty(memKey != null ? System.getenv(memKey) : null, DEFAULT_MEM);
     cmd.add("-Xmx" + mem);
     addPermGenSizeOpt(cmd);
     cmd.add(className);
     cmd.addAll(classArgs);
+
+
+    // cmd(List)组成：
+    //   - 调用 buildJavaCommand()
+    //     - ${JAVA_HOME}/bin/java
+    //     - 若 ${SPARK_HOME}/conf/java-opts 存在，将文件设置的内容加入
+    //     - "-cp"
+    //     - 调用 buildClassPath() 
+    //       - ${SPARK_CLASSPATH}:${SPARK_CONF_DIR}:${jarDirs}:${HADOOP_CONF_DIR}:${YARN_CONF_DIR}:${SPARK_DIST_CLASSPATH}
+    //   - ${javaOptsKeys(List)}
+    //   - "-Xmx" + ${memKey变量值}|DEFAULT_MEM 
+    //   - 调用 addPermGenSizeOpt()
+    //     - "-XX:MaxPermSize=256m"
+    //   - className变量值
+    //   - classArgs变量值
     return cmd;
   }
 
