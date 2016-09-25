@@ -2390,6 +2390,7 @@ private[spark] object Utils extends Logging {
    * diagnostic state.
    */
   def initDaemon(log: Logger): Unit = {
+    // System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/util/Utils.scala] [Debug] === 这里是 org.apache.spark.util.Utils.initDaemon 方法 ===")
     log.info(s"Started daemon with process name: ${Utils.getProcessName()}")
     SignalUtils.registerLogger(log)
   }

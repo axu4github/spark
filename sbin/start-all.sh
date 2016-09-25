@@ -42,7 +42,7 @@ echo "axu.print [sbin/start-all.sh] <in> [sbin/start-master.sh]. <=== "
 "${SPARK_HOME}/sbin"/start-master.sh
 echo "axu.print [sbin/start-all.sh] <out> [sbin/start-master.sh]. ===>"
 
-# exit 1
+exit 1
 
 # Start Workers
 "${SPARK_HOME}/sbin"/start-slaves.sh

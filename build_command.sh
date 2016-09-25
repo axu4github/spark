@@ -9,7 +9,7 @@
 # - org.apache.spark.launcher 模块名称：spark-launcher_2.11
 #
 
-usage="Usage: build_command.sh (all|test|launcher)"
+usage="Usage: build_command.sh (all|test|launcher|core|help)"
 
 if [ $# -lt 1 ]; then
   echo $usage
@@ -62,6 +62,10 @@ case $1 in
     "core")
         submodule="spark-core_2.11"
     ;;
+    "help")
+        echo $usage
+        exit 1
+    ;;
     *) 
         echo $usage
         exit 1
@@ -69,6 +73,7 @@ case $1 in
 esac
 
 # 编译单个模块
+# 'submodule'的取值是通过pom.xml，例'launcher'的'submodule'值为launcher/pom.xml中的'artifactId'的值（spark-launcher_2.11）
 CMD="./build/mvn -pl :${submodule} clean install"
 echo "${CMD}"
 ${CMD}

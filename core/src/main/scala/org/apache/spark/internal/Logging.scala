@@ -42,6 +42,8 @@ private[spark] trait Logging {
 
   // Method to get or create the logger for this object
   protected def log: Logger = {
+    // System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/internal/Logging.scala] [Debug] === 这里是 org.apache.spark.internal.Logging.log 方法 ===")
+
     if (log_ == null) {
       initializeLogIfNecessary(false)
       log_ = LoggerFactory.getLogger(logName)
