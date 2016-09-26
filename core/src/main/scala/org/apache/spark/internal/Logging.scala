@@ -43,8 +43,9 @@ private[spark] trait Logging {
   // Method to get or create the logger for this object
   protected def log: Logger = {
     // System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/internal/Logging.scala] [Debug] === 这里是 org.apache.spark.internal.Logging.log 方法 ===")
-
+    // 1. 单例模式，创建or返回log_对象
     if (log_ == null) {
+      // 2. 调用initializeLogIfNecessary
       initializeLogIfNecessary(false)
       log_ = LoggerFactory.getLogger(logName)
     }
@@ -97,7 +98,9 @@ private[spark] trait Logging {
     log.isTraceEnabled
   }
 
+  // 3. 初始化
   protected def initializeLogIfNecessary(isInterpreter: Boolean): Unit = {
+    // 4. 调用 ojbect Logging initialized 变量
     if (!Logging.initialized) {
       Logging.initLock.synchronized {
         if (!Logging.initialized) {

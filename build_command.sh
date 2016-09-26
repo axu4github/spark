@@ -74,7 +74,8 @@ esac
 
 # 编译单个模块
 # 'submodule'的取值是通过pom.xml，例'launcher'的'submodule'值为launcher/pom.xml中的'artifactId'的值（spark-launcher_2.11）
-CMD="./build/mvn -pl :${submodule} clean install"
+# -DskipTests 跳过测试（编译core模块时，Test大约需要执行30分钟）
+CMD="./build/mvn -DskipTests -pl :${submodule} clean install"
 echo "${CMD}"
 ${CMD}
 

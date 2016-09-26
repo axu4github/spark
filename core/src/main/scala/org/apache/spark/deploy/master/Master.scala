@@ -46,7 +46,7 @@ private[deploy] class Master(
     val conf: SparkConf)
   extends ThreadSafeRpcEndpoint with Logging with LeaderElectable {
 
-  // System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] [Debug] === 现在是class Master类，测试bin/spark-class调用时是否是直接调用object类 ===")
+  System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] [Debug] === 现在是class Master类，测试bin/spark-class调用时是否是直接调用object类 ===")
 
   private val forwardMessageThread =
     ThreadUtils.newDaemonSingleThreadScheduledExecutor("master-forward-message-thread")
@@ -1021,23 +1021,23 @@ private[deploy] class Master(
 }
 
 // 由 bin/spark-class 调用
-// /Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/bin/java 
-// -cp 
-// /Users/axu/code/axuProject/spark-2.0.0-hadoop2.4/conf/:/Users/axu/code/axuProject/spark-2.0.0-hadoop2.4/assembly/target/scala-2.11/jars/* 
-// -Xmx1g 
-// -XX:MaxPermSize=256m 
-// org.apache.spark.deploy.master.Master 
+// /Library/Java/JavaVirtualMachines/jdk1.7.0_79.jdk/Contents/Home/bin/java
+// -cp
+// /Users/axu/code/axuProject/spark-2.0.0-hadoop2.4/conf/:/Users/axu/code/axuProject/spark-2.0.0-hadoop2.4/assembly/target/scala-2.11/jars/*
+// -Xmx1g
+// -XX:MaxPermSize=256m
+// org.apache.spark.deploy.master.Master
 // --host axu4iMac.local --port 7077 --webui-port 8080
 
 private[deploy] object Master extends Logging {
-  // System.err.println(s"axu.print [Log] [16] [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] 由'bin/spark-class'调用。")
+  System.err.println(s"axu.print [Log] [16] [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] 由'bin/spark-class'调用。")
 
-  // System.err.println(s"axu.print [Log] [17] [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] 定义全局变量SYSTEM_NAME='sparkMaster'|ENDPOINT_NAME='Master'。")  
+  System.err.println(s"axu.print [Log] [17] [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] 定义全局变量SYSTEM_NAME='sparkMaster'|ENDPOINT_NAME='Master'。")
   val SYSTEM_NAME = "sparkMaster"
   val ENDPOINT_NAME = "Master"
 
   def main(argStrings: Array[String]) {
-    // System.err.println(s"axu.print [Log] [18] [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] 由'bin/spark-class'的参数org.apache.spark.deploy.master.Master调用Master类的main方法。") 
+    System.err.println(s"axu.print [Log] [18] [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] 由'bin/spark-class'的参数org.apache.spark.deploy.master.Master调用Master类的main方法。") 
 
     // log -> org.apache.spark.internal.Logging.log (trait)
     Utils.initDaemon(log)
