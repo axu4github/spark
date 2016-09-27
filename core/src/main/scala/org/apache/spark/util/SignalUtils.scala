@@ -36,6 +36,7 @@ private[spark] object SignalUtils extends Logging {
   private var loggerRegistered = false
 
   /** Register a signal handler to log signals on UNIX-like systems. */
+  // - 单例模式注册logger
   def registerLogger(log: Logger): Unit = synchronized {
     if (!loggerRegistered) {
       Seq("TERM", "HUP", "INT").foreach { sig =>

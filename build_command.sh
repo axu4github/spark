@@ -22,6 +22,7 @@ if [ -z "${SPARK_HOME}"]; then
 fi
 
 # 切换到SPARK_HOME
+echo "==== 切换到'${SPARK_HOME}'目录."
 cd ${SPARK_HOME}
 
 # 切换scala版本
@@ -36,10 +37,10 @@ cd ${SPARK_HOME}
 # [INFO] Compiling 203 Scala sources and 9 Java sources to /Users/me/Development/spark/core/target/scala-2.11/classes...
 # [ERROR] Java heap space -> [Help 1]
 # ```
+echo "==== 设置MAVEN编译参数."
 export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
 
-
-
+echo "==== 开始编译."
 case $1 in
     # 如果是全部编译，则执行编译后退出
     "all") 
@@ -61,6 +62,7 @@ case $1 in
     ;;
     "core")
         submodule="spark-core_2.11"
+        jar_file="${SPARK_HOME}/core/target/spark-core_2.11-2.1.0-SNAPSHOT.jar" 
     ;;
     "help")
         echo $usage
@@ -76,10 +78,16 @@ esac
 # 'submodule'的取值是通过pom.xml，例'launcher'的'submodule'值为launcher/pom.xml中的'artifactId'的值（spark-launcher_2.11）
 # -DskipTests 跳过测试（编译core模块时，Test大约需要执行30分钟）
 CMD="./build/mvn -DskipTests -pl :${submodule} clean install"
-echo "${CMD}"
+echo "编译命令: ${CMD}"
 ${CMD}
 
- 
+echo "==== 拷贝编译完成的Jar文件到'${SPARK_HOME}/assembly/target/scala-2.11/jars/'目录."
+CMD="cp ${jar_file} ${SPARK_HOME}/assembly/target/scala-2.11/jars/"
+echo "拷贝命令: ${CMD}"
+${CMD}
+
 # 返回执行命令目录
 # cd -
+
+echo "-EOF-"
 # -- EOF ---

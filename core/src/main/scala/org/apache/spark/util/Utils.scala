@@ -2391,8 +2391,10 @@ private[spark] object Utils extends Logging {
    */
   def initDaemon(log: Logger): Unit = {
     System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/util/Utils.scala] [Debug] === 这里是 org.apache.spark.util.Utils.initDaemon 方法 ===")
-    
+    // Utils.getProcessName() 调用 ManagementFactory 插件返回内容为 进程ID@主机名称（PID@hostname）
     log.info(s"Started daemon with process name: ${Utils.getProcessName()}")
+
+    System.err.println(s"axu.print [Log] [19] [core/src/main/scala/org/apache/spark/util/Utils.scala] 调用'core.src.main.scala.org.apache.spark.util.SignalUtils.registerLogger'方法。")
     SignalUtils.registerLogger(log)
   }
 

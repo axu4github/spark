@@ -35,6 +35,7 @@ private[spark] trait Logging {
   @transient private var log_ : Logger = null
 
   // Method to get the logger name for this object
+  // - 14. 获取日志名称
   protected def logName = {
     // Ignore trailing $'s in the class names for Scala objects
     this.getClass.getName.stripSuffix("$")
@@ -43,11 +44,16 @@ private[spark] trait Logging {
   // Method to get or create the logger for this object
   protected def log: Logger = {
     // System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/internal/Logging.scala] [Debug] === 这里是 org.apache.spark.internal.Logging.log 方法 ===")
-    // 1. 单例模式，创建or返回log_对象
+    // 由于基本所有程序都会调用log方法，若以日志的方式打印内容会打出很多日志。
+    // 所以这里使用注释的行驶说明程序运行流程以及调用方式
+    // - 1. 单例模式，创建or返回log_对象
     if (log_ == null) {
-      // 2. 调用initializeLogIfNecessary
+      // - 2. 调用initializeLogIfNecessary，返回log_
       initializeLogIfNecessary(false)
+      // - 13. 获取日志对象
       log_ = LoggerFactory.getLogger(logName)
+
+      System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/internal/Logging.scala] [Debug] logName: [$logName]")
     }
     log_
   }
@@ -98,12 +104,14 @@ private[spark] trait Logging {
     log.isTraceEnabled
   }
 
-  // 3. 初始化
+  // - 3. 初始化
   protected def initializeLogIfNecessary(isInterpreter: Boolean): Unit = {
-    // 4. 调用 ojbect Logging initialized 变量
+    // - 4. 调用 ojbect Logging initialized 变量
     if (!Logging.initialized) {
+      // - 8. 基于多线程的同步锁处理，保证在多线程的环境中不会同时访问
       Logging.initLock.synchronized {
         if (!Logging.initialized) {
+          // - 9. 调用initializeLogging方法
           initializeLogging(isInterpreter)
         }
       }
@@ -117,16 +125,22 @@ private[spark] trait Logging {
     // This distinguishes the log4j 1.2 binding, currently
     // org.slf4j.impl.Log4jLoggerFactory, from the log4j 2.0 binding, currently
     // org.apache.logging.slf4j.Log4jLoggerFactory
+    // - 10. 判断是否是使用log4j 1.2
     val usingLog4j12 = "org.slf4j.impl.Log4jLoggerFactory".equals(binderClass)
     if (usingLog4j12) {
       val log4j12Initialized = LogManager.getRootLogger.getAllAppenders.hasMoreElements
       // scalastyle:off println
       if (!log4j12Initialized) {
         val defaultLogProps = "org/apache/spark/log4j-defaults.properties"
+        // - 11. 调用'org.apache.spark.util.Utils.getSparkClassLoader'，获取defaultLogProps对应的日志配置url
         Option(Utils.getSparkClassLoader.getResource(defaultLogProps)) match {
           case Some(url) =>
+            // - 12. 执行日志配置
+            // url ==> jar:file:${SPARK_HOME}/assembly/target/scala-2.11/jars/spark-core_2.11-2.1.0-SNAPSHOT.jar!/org/apache/spark/log4j-defaults.properties
+            // 真正配置文件位置为 ${SPARK_HOME}/core/src/main/resources/org/apache/spark/log4j-defaults.properties
             PropertyConfigurator.configure(url)
             System.err.println(s"Using Spark's default log4j profile: $defaultLogProps")
+            System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/internal/Logging.scala] [Debug] log4j configure url: [$url]")
           case None =>
             System.err.println(s"Spark was unable to load $defaultLogProps")
         }
@@ -155,12 +169,17 @@ private[spark] trait Logging {
   }
 }
 
+// - 5. 通过静态方法 调用 object 对象
 private object Logging {
+
+  // - 6. 声明变量
+  // #!# @volatile 是什么意思不知
   @volatile private var initialized = false
   val initLock = new Object()
   try {
     // We use reflection here to handle the case where users remove the
     // slf4j-to-jul bridge order to route their logs to JUL.
+    // - 7. 基于'org.slf4j.bridge.SLF4JBridgeHandler'的日志重定向功能初始化
     val bridgeClass = Utils.classForName("org.slf4j.bridge.SLF4JBridgeHandler")
     bridgeClass.getMethod("removeHandlersForRootLogger").invoke(null)
     val installed = bridgeClass.getMethod("isInstalled").invoke(null).asInstanceOf[Boolean]
