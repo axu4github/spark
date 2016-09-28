@@ -1950,6 +1950,8 @@ private[spark] object Utils extends Logging {
    * already set. Return the path of the properties file used.
    */
   def loadDefaultSparkProperties(conf: SparkConf, filePath: String = null): String = {
+    // Option('a').getOrElse('b') => 'a' == null ? 'b' : 'a'
+    // getDefaultPropertiesFile() 返回 spark-defaults.conf 的全路径
     val path = Option(filePath).getOrElse(getDefaultPropertiesFile())
     Option(path).foreach { confFile =>
       getPropertiesFromFile(confFile).filter { case (k, v) =>
@@ -1964,6 +1966,7 @@ private[spark] object Utils extends Logging {
 
   /** Load properties present in the given file. */
   def getPropertiesFromFile(filename: String): Map[String, String] = {
+    // 验证配置文件本身
     val file = new File(filename)
     require(file.exists(), s"Properties file $file does not exist")
     require(file.isFile(), s"Properties file $file is not a normal file")
@@ -1983,6 +1986,7 @@ private[spark] object Utils extends Logging {
   }
 
   /** Return the path of the default Spark properties file. */
+  // 找到 spark-defaults.conf 全路径
   def getDefaultPropertiesFile(env: Map[String, String] = sys.env): String = {
     env.get("SPARK_CONF_DIR")
       .orElse(env.get("SPARK_HOME").map { t => s"$t${File.separator}conf" })
