@@ -39,7 +39,7 @@ import org.apache.spark.util.Utils
 /**
  * Spark class responsible for security.
  *
- * In general this class should be instantiated by the SparkEnv and most components
+ * In general this class should be instantiated by（实例化） the SparkEnv and most components
  * should access it from that. There are some cases where the SparkEnv hasn't been
  * initialized yet and this class must be instantiated directly.
  *

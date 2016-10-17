@@ -51,6 +51,7 @@ private[master] class MasterArguments(args: Array[String], conf: SparkConf) exte
   parse(args.toList)
 
   // This mutates the SparkConf, so all accesses to it must be made after this line
+  // 通过 '--properties-file' 参数指定加载该参数配置文件中的所有配置
   propertiesFile = Utils.loadDefaultSparkProperties(conf, propertiesFile)
 
   if (conf.contains("spark.master.ui.port")) {

@@ -1040,10 +1040,23 @@ private[deploy] object Master extends Logging {
     System.err.println(s"axu.print [Log] [18] [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] 由'bin/spark-class'的参数org.apache.spark.deploy.master.Master调用Master类的main方法。") 
 
     // log -> org.apache.spark.internal.Logging.log (trait)
+    // 根据defaultLogProps（org/apache/spark/log4j-defaults.properties）配置，初始化log对象
+    // 日志配置文件在jar文件中，通过URL读取（jar:file:${SPARK_HOME}/assembly/target/scala-2.11/jars/spark-core_2.11-2.1.0-SNAPSHOT.jar!/org/apache/spark/log4j-defaults.properties）
     Utils.initDaemon(log)
+
+    // 初始化SparkConf对象
+    // 参数 loadDefaults：是否加载系统全局变量和classPath，若不加参数默认是True
+    // 通过 loadFromSystemProperties 方法，加载任何以spark开头的系统变量（spark.*）
     val conf = new SparkConf
+
+    // 解析传入参数
+    // 根据默认或者传入参数设置args变量。
     val args = new MasterArguments(argStrings, conf)
+
+    
     val (rpcEnv, _, _) = startRpcEnvAndEndpoint(args.host, args.port, args.webUiPort, conf)
+
+    
     rpcEnv.awaitTermination()
   }
 
