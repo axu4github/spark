@@ -69,6 +69,7 @@ private[spark] object RpcEnv {
  */
 private[spark] abstract class RpcEnv(conf: SparkConf) {
 
+  // 配置 "spark.rpc.lookupTimeout", "spark.network.timeout"， 默认120s
   private[spark] val defaultLookupTimeout = RpcUtils.lookupRpcTimeout(conf)
 
   /**

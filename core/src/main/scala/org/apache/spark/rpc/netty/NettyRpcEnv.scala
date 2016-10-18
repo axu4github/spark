@@ -440,9 +440,22 @@ private[rpc] class NettyRpcEnvFactory extends RpcEnvFactory with Logging {
     // KryoSerializer in future, we have to use ThreadLocal to store SerializerInstance
     val javaSerializerInstance =
       new JavaSerializer(sparkConf).newInstance().asInstanceOf[JavaSerializerInstance]
+
+    // config 是 RpcEnvConfig 
+    // private[spark] case class RpcEnvConfig(
+    //   conf: SparkConf, 
+    //   name: String,  // system.name
+    //   bindAddress: String, // host 
+    //   advertiseAddress: String, // host 
+    //   port: Int, // port 
+    //   securityManager: SecurityManager,
+    //   clientMode: Boolean) // false
+
     val nettyEnv =
       new NettyRpcEnv(sparkConf, javaSerializerInstance, config.advertiseAddress,
         config.securityManager)
+
+    
     if (!config.clientMode) {
       val startNettyRpcEnv: Int => (NettyRpcEnv, Int) = { actualPort =>
         nettyEnv.startServer(config.bindAddress, actualPort)

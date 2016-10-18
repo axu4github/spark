@@ -1071,11 +1071,18 @@ private[deploy] object Master extends Logging {
       port: Int,
       webUiPort: Int,
       conf: SparkConf): (RpcEnv, Int, Option[Int]) = {
+
+    // 根据SparkConf设置的配置文件，初始化SecurityManager
     val securityMgr = new SecurityManager(conf)
+
+    // 使用netty服务，最终调用 Utils.startServiceOnPort() 方法启动 master 服务
     val rpcEnv = RpcEnv.create(SYSTEM_NAME, host, port, conf, securityMgr)
+
     val masterEndpoint = rpcEnv.setupEndpoint(ENDPOINT_NAME,
       new Master(rpcEnv, rpcEnv.address, webUiPort, securityMgr, conf))
+
     val portsResponse = masterEndpoint.askWithRetry[BoundPortsResponse](BoundPortsRequest)
+
     (rpcEnv, portsResponse.webUIPort, portsResponse.restPort)
   }
 }
