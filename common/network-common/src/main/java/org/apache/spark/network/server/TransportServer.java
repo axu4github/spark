@@ -87,6 +87,10 @@ public class TransportServer implements Closeable {
 
   private void init(String hostToBind, int portToBind) {
 
+    // enum IOMode {
+    //   NIO, EPOLL
+    // }
+    // 默认为 NIO（io.mode配置）
     IOMode ioMode = IOMode.valueOf(conf.ioMode());
     EventLoopGroup bossGroup =
       NettyUtils.createEventLoop(ioMode, conf.serverThreads(), "shuffle-server");

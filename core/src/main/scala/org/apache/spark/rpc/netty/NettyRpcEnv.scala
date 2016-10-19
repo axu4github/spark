@@ -115,7 +115,12 @@ private[netty] class NettyRpcEnv(
       } else {
         java.util.Collections.emptyList()
       }
+
+    // 返回 new TransportServer(TransportContext, host, port, rpcHandler, bootstraps)
+    // 使用 Netty 通过 NIO（应该是Selector）模式，启动 Shuffle Server {@link common/network-common/src/main/java/org/apache/spark/network/server/TransportServer.java | Line 136}
     server = transportContext.createServer(bindAddress, port, bootstraps)
+
+    // 通过 dispatcher 注册以spark://开头有效的地址信息
     dispatcher.registerRpcEndpoint(
       RpcEndpointVerifier.NAME, new RpcEndpointVerifier(this, dispatcher))
   }
@@ -450,17 +455,31 @@ private[rpc] class NettyRpcEnvFactory extends RpcEnvFactory with Logging {
     //   port: Int, // port 
     //   securityManager: SecurityManager,
     //   clientMode: Boolean) // false
-
+    //
+    // NettyRpcEnv 初始化如下信息：
+    //   // 消息配置
+    //   1. private[netty] val transportConf = SparkTransportConf.fromSparkConf(conf.clone.set("spark.rpc.io.numConnectionsPerPeer", "1"), "rpc", conf.getInt("spark.rpc.io.threads", 0))
+    //   // 消息调度
+    //   2. private val dispatcher: Dispatcher = new Dispatcher(this)
+    //   // 流式传输管理三种文件：a. /files b. /jars c. 任意文件夹
+    //   3. private val streamManager = new NettyStreamManager(this)
+    //   // 主要初始化了 new NettyRpcHandler 对象，主要用于：保持和所有可用的client进行通信使用。
+    //   4. private val transportContext = new TransportContext(transportConf, new NettyRpcHandler(dispatcher, this, streamManager))
+    //  
     val nettyEnv =
       new NettyRpcEnv(sparkConf, javaSerializerInstance, config.advertiseAddress,
         config.securityManager)
-
     
     if (!config.clientMode) {
+      // 使用 Netty 通过 NIO（应该是Selector）模式，启动 Shuffle Server {@link common/network-common/src/main/java/org/apache/spark/network/server/TransportServer.java | Line 136}
+      // 通过 dispatcher 注册以spark://开头有效的地址信息
+      // 闭包函数，传递给 Utils.startServiceOnPort 。
+      // Utils.startServiceOnPort 通过检查端口号获取可以使用的端口，将可用的端口号作为参数调用该方法。
       val startNettyRpcEnv: Int => (NettyRpcEnv, Int) = { actualPort =>
         nettyEnv.startServer(config.bindAddress, actualPort)
         (nettyEnv, nettyEnv.address.port)
       }
+
       try {
         Utils.startServiceOnPort(config.port, startNettyRpcEnv, sparkConf, config.name)._1
       } catch {
@@ -469,6 +488,7 @@ private[rpc] class NettyRpcEnvFactory extends RpcEnvFactory with Logging {
           throw e
       }
     }
+    
     nettyEnv
   }
 }

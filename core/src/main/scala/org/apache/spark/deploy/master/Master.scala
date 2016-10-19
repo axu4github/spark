@@ -1076,6 +1076,7 @@ private[deploy] object Master extends Logging {
     val securityMgr = new SecurityManager(conf)
 
     // 使用netty服务，最终调用 Utils.startServiceOnPort() 方法启动 master 服务
+    // RpcEnv.create() 方法最终返回 NettyRpcEnv 对象。中间会调用 Utils.startServiceOnPort() 方法。
     val rpcEnv = RpcEnv.create(SYSTEM_NAME, host, port, conf, securityMgr)
 
     val masterEndpoint = rpcEnv.setupEndpoint(ENDPOINT_NAME,

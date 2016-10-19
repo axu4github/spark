@@ -32,6 +32,8 @@ import org.apache.spark.util.ThreadUtils
 
 /**
  * A message dispatcher, responsible for routing RPC messages to the appropriate endpoint(s).
+ *
+ * 消息调度
  */
 private[netty] class Dispatcher(nettyEnv: NettyRpcEnv) extends Logging {
 
@@ -51,13 +53,14 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv) extends Logging {
   private val receivers = new LinkedBlockingQueue[EndpointData]
 
   /**
-   * True if the dispatcher has been stopped. Once stopped, all messages posted will be bounced
+   * True if the dispatcher has been stopped. Once stopped, all messages posted will be bounced（反弹）
    * immediately.
    */
   @GuardedBy("this")
   private var stopped = false
 
   def registerRpcEndpoint(name: String, endpoint: RpcEndpoint): NettyRpcEndpointRef = {
+    // 返回 spark:// 开头有效的地址
     val addr = RpcEndpointAddress(nettyEnv.address, name)
     val endpointRef = new NettyRpcEndpointRef(nettyEnv.conf, addr, nettyEnv)
     synchronized {
