@@ -1077,8 +1077,12 @@ private[deploy] object Master extends Logging {
 
     // 使用netty服务，最终调用 Utils.startServiceOnPort() 方法启动 master 服务
     // RpcEnv.create() 方法最终返回 NettyRpcEnv 对象。中间会调用 Utils.startServiceOnPort() 方法。
+    // Utils.startServiceOnPort() 方法会调用 NettyRpcEnv.startServer() 方法启动服务。
     val rpcEnv = RpcEnv.create(SYSTEM_NAME, host, port, conf, securityMgr)
 
+    // ENDPOINT_NAME -> 'Master'
+    // 最后调用 dispatcher.registerRpcEndpoint 同 NettyRpcEnv.startServer() 方法最终调用一致。
+    // 将 ENDPOINT_NAME
     val masterEndpoint = rpcEnv.setupEndpoint(ENDPOINT_NAME,
       new Master(rpcEnv, rpcEnv.address, webUiPort, securityMgr, conf))
 

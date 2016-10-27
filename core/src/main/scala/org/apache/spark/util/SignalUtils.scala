@@ -35,11 +35,24 @@ private[spark] object SignalUtils extends Logging {
   /** A flag to make sure we only register the logger once. */
   private var loggerRegistered = false
 
-  /** Register a signal handler to log signals on UNIX-like systems. */
-  // - 单例模式注册logger
+  /** 
+   * Register a signal handler to log signals on UNIX-like systems. 
+   * 
+   * synchronized 关键字解释：
+   * 1. 保证同一时刻 synchronized 关键字中的代码只被执行一次。
+   * 2. 若两个线程同时需要执行，那么其中一个线程会等待另外一个线程执行完成后，再执行代码块中的代码。
+   *
+   * TERM: 终止信号
+   * HUP: 终端挂起或者控制进程终止
+   * INT: 键盘中断
+   * 
+   */
   def registerLogger(log: Logger): Unit = synchronized {
     if (!loggerRegistered) {
       Seq("TERM", "HUP", "INT").foreach { sig =>
+        // 下面代码等于
+        // 1. 先执行: log.error("RECEIVED SIGNAL " + sig)
+        // 2. 再执行: SignalUtils.register(sig)(false)
         SignalUtils.register(sig) {
           log.error("RECEIVED SIGNAL " + sig)
           false
@@ -60,6 +73,7 @@ private[spark] object SignalUtils extends Logging {
   def register(signal: String)(action: => Boolean): Unit = synchronized {
     if (SystemUtils.IS_OS_UNIX) {
       try {
+        // handlers 是一个可变的HashMap[String, ActionHandler]。
         val handler = handlers.getOrElseUpdate(signal, {
           logInfo("Registered signal handler for " + signal)
           new ActionHandler(new Signal(signal))

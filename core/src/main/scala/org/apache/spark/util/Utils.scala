@@ -2384,6 +2384,9 @@ private[spark] object Utils extends Logging {
   /**
    * Returns the name of this JVM process. This is OS dependent but typically (OSX, Linux, Windows),
    * this is formatted as PID@hostname.
+   *
+   * 返回当前JVM进程的名称，格式是 PID@hostname。
+   * 使用 java.lang.management.ManagementFactory
    */
   def getProcessName(): String = {
     ManagementFactory.getRuntimeMXBean().getName()
