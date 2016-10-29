@@ -38,6 +38,7 @@ private[spark] trait Logging {
   // - 14. 获取日志名称
   protected def logName = {
     // Ignore trailing $'s in the class names for Scala objects
+    // 返回调用该方法的类的类名，谁调用返回谁
     this.getClass.getName.stripSuffix("$")
   }
 
@@ -48,13 +49,16 @@ private[spark] trait Logging {
     // 所以这里使用注释的行驶说明程序运行流程以及调用方式
     // - 1. 单例模式，创建or返回log_对象
     if (log_ == null) {
-      // - 2. 调用initializeLogIfNecessary，返回log_
+      // - 2. 调用initializeLogIfNecessary
+      // - 工作：加载配置信息
+      // - 详细：如果是使用log4j12，则调用 PropertyConfigurator.configure 方法，将 ${SPARK_HOME}/core/src/main/resources/org/apache/spark/log4j-defaults.properties 文件。通过 URL方式 （该文件已经被打到jar包中）加载配置。
       initializeLogIfNecessary(false)
       // - 13. 获取日志对象
       log_ = LoggerFactory.getLogger(logName)
 
       System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/internal/Logging.scala] [Debug] logName: [$logName]")
     }
+
     log_
   }
 
@@ -107,6 +111,7 @@ private[spark] trait Logging {
   // - 3. 初始化
   protected def initializeLogIfNecessary(isInterpreter: Boolean): Unit = {
     // - 4. 调用 ojbect Logging initialized 变量
+    // - 调用 Logging.initialized 变量的时候就已经声明 object Logging 中的所有非方法。
     if (!Logging.initialized) {
       // - 8. 基于多线程的同步锁处理，保证在多线程的环境中不会同时访问
       Logging.initLock.synchronized {
@@ -118,6 +123,11 @@ private[spark] trait Logging {
     }
   }
 
+  /**
+   * 加载配置信息
+   * 
+   * 如果是使用log4j12，则调用 PropertyConfigurator.configure 方法，将 ${SPARK_HOME}/core/src/main/resources/org/apache/spark/log4j-defaults.properties 文件。通过 URL方式 （该文件已经被打到jar包中）加载配置。
+   */
   private def initializeLogging(isInterpreter: Boolean): Unit = {
     // Don't use a logger in here, as this is itself occurring during initialization of a logger
     // If Log4j 1.2 is being used, but is not initialized, load a default properties file
@@ -165,6 +175,7 @@ private[spark] trait Logging {
 
     // Force a call into slf4j to initialize it. Avoids this happening from multiple threads
     // and triggering this: http://mailman.qos.ch/pipermail/slf4j-dev/2010-April/002956.html
+    // 重新调用 Trait Logging.log 方法。
     log
   }
 }
@@ -179,7 +190,26 @@ private object Logging {
   try {
     // We use reflection here to handle the case where users remove the
     // slf4j-to-jul bridge order to route their logs to JUL.
+    // 
     // - 7. 基于'org.slf4j.bridge.SLF4JBridgeHandler'的日志重定向功能初始化
+
+    // 参考文档：http://www.slf4j.org/api/org/slf4j/bridge/SLF4JBridgeHandler.html
+
+    // SLF4JBridgeHandler 使用方法
+    // ```
+    // SLF4JBridgeHandler.removeHandlersForRootLogger();
+    // SLF4JBridgeHandler.install();
+    // ```
+
+    // SLF4JBridgeHandler 完成功能
+    // 根据参考文档中的说明是如果设置了 SLF4JBridgeHandler，是将所有 j.u.l 的信息都会转发到 SLF4J 中。和Spark默认的说明正好相反，不知道哪个是对的。不过 SLF4JBridgeHandler 的作用应该是适应使用不同日志框架，而后统一处理使用。
+    // ```
+    // import  java.util.logging.Logger;
+    // ...
+    // // usual pattern: get a Logger and then log a message
+    // Logger julLogger = Logger.getLogger("org.wombat");
+    // julLogger.fine("hello world"); // this will get redirected to SLF4J
+    // ```
     val bridgeClass = Utils.classForName("org.slf4j.bridge.SLF4JBridgeHandler")
     bridgeClass.getMethod("removeHandlersForRootLogger").invoke(null)
     val installed = bridgeClass.getMethod("isInstalled").invoke(null).asInstanceOf[Boolean]

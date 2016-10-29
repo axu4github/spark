@@ -1039,7 +1039,10 @@ private[deploy] object Master extends Logging {
   def main(argStrings: Array[String]) {
     System.err.println(s"axu.print [Log] [18] [core/src/main/scala/org/apache/spark/deploy/master/Master.scala] 由'bin/spark-class'的参数org.apache.spark.deploy.master.Master调用Master类的main方法。") 
 
-    // log -> org.apache.spark.internal.Logging.log (trait)
+    // - 解释 log 变量未声明：
+    // - 1. 由于 object Master 类继承了 Logging (org.apache.spark.internal.Logging) ，同时 Logging 是一个 Trait 类。
+    // - 2. 所以在 ojbect Master 类中，可以直接使用继承 Trait Logging 类中已经定义好了的 变量 和 方法 （在之前是不需要再声明的）。
+
     // 根据defaultLogProps（org/apache/spark/log4j-defaults.properties）配置，初始化log对象
     // 日志配置文件在jar文件中，通过URL读取（jar:file:${SPARK_HOME}/assembly/target/scala-2.11/jars/spark-core_2.11-2.1.0-SNAPSHOT.jar!/org/apache/spark/log4j-defaults.properties）
     Utils.initDaemon(log)
