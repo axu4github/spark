@@ -45,6 +45,8 @@ private[spark] object SignalUtils extends Logging {
    * TERM: 终止信号
    * HUP: 终端挂起或者控制进程终止
    * INT: 键盘中断
+   *
+   * sun.misc.Signal 使用说明：http://www.programgo.com/article/58772663037/
    * 
    */
   def registerLogger(log: Logger): Unit = synchronized {
@@ -74,6 +76,15 @@ private[spark] object SignalUtils extends Logging {
     if (SystemUtils.IS_OS_UNIX) {
       try {
         // handlers 是一个可变的HashMap[String, ActionHandler]。
+        // getOrElseUpdate 说明：
+        // - 1. 在一个 可变的 var hm = cala.collection.mutable.HashMap [k: String, f(k): Funciton]中，执行 hm(key)。
+        // - 2. 若 hm(k) 的键存在，则不再执行 f(k) 操作，直接返回 f(k) 的值。
+        // - 3. 若键不存在，则执行 f(k) 得到值 v ，然后将 (k -> v) 存入 hm 中。
+        // 该用法用来完成当 f(k) 这个方法需要很多时间执行的时候：
+        //   - 若不使用 getOrElseUpdate 方法，则获取 hm(k) 时，每次都需要执行 f(k)。
+        //   - 若使用该方法则，在获取 hm(k) 时，只在第一次执行 f(k)，之后都不需要执行 f(k) 直接获取缓存的值。
+
+        // 
         val handler = handlers.getOrElseUpdate(signal, {
           logInfo("Registered signal handler for " + signal)
           new ActionHandler(new Signal(signal))
@@ -93,6 +104,11 @@ private[spark] object SignalUtils extends Logging {
     /**
      * List of actions upon the signal; the callbacks should return true if the signal is "handled",
      * i.e. should not escalate to the next callback.
+     *
+     * java.util.LinkedList 双向链表：http://tw.gitbook.net/java/util/java_util_linkedlist.html
+     * 声明一个双向链表，内容是一个方法，返回值必须是布尔型。
+     *
+     * actions: java.util.List[() => Boolean] = []
      */
     private val actions = Collections.synchronizedList(new java.util.LinkedList[() => Boolean])
 
@@ -111,6 +127,21 @@ private[spark] object SignalUtils extends Logging {
       // (i.e. all actions return false). Note that calling `map` is to ensure that
       // all actions are run, `forall` is short-circuited and will stop evaluating
       // after reaching a first false predicate.
+      //
+      // 判断 actions 中的元素（函数）返回值是否全部都是 false 。
+      // ```
+      // scala> actions
+      // res20: java.util.List[() => Boolean] = [<function0>, <function0>, <function0>]
+      //
+      // scala> actions.asScala
+      // res21: scala.collection.mutable.Buffer[() => Boolean] = Buffer(<function0>, <function0>, <function0>)
+      // 
+      // scala> actions.asScala.map(action => action())
+      // res22: scala.collection.mutable.Buffer[Boolean] = ArrayBuffer(false, true, false)
+      //
+      // scala> actions.asScala.map(action => action()).forall(_ == false)
+      // res23: Boolean = false
+      // ```
       val escalate = actions.asScala.map(action => action()).forall(_ == false)
       if (escalate) {
         prevHandler.handle(sig)
@@ -124,6 +155,9 @@ private[spark] object SignalUtils extends Logging {
      * Adds an action to be run by this handler.
      * @param action An action to be run when a signal is received. Return true if the signal
      *               should be stopped with this handler, false if it should be escalated.
+     *
+     * 向链表添加内容，添加一个空函数()，返回值是 action 。
+     * java.util.List[() => Boolean] = [<function0>, <function0>, <function0>]
      */
     def register(action: => Boolean): Unit = actions.add(() => action)
   }
