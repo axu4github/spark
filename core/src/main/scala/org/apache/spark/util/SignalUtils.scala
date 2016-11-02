@@ -48,6 +48,8 @@ private[spark] object SignalUtils extends Logging {
    *
    * sun.misc.Signal 使用说明：http://www.programgo.com/article/58772663037/
    * 
+   * 
+   * 
    */
   def registerLogger(log: Logger): Unit = synchronized {
     if (!loggerRegistered) {
@@ -84,7 +86,6 @@ private[spark] object SignalUtils extends Logging {
         //   - 若不使用 getOrElseUpdate 方法，则获取 hm(k) 时，每次都需要执行 f(k)。
         //   - 若使用该方法则，在获取 hm(k) 时，只在第一次执行 f(k)，之后都不需要执行 f(k) 直接获取缓存的值。
 
-        // 
         val handler = handlers.getOrElseUpdate(signal, {
           logInfo("Registered signal handler for " + signal)
           new ActionHandler(new Signal(signal))
@@ -120,6 +121,7 @@ private[spark] object SignalUtils extends Logging {
      * before this method returns, it is escalated to the previous handler.
      */
     override def handle(sig: Signal): Unit = {
+      logInfo("axu.print [core/src/main/scala/org/apache/spark/util/SignalUtils.scala] [Debug] === 这里是 ActionHandler 类 override handle 方法 === sig " + sig.getName())
       // register old handler, will receive incoming signals while this handler is running
       Signal.handle(signal, prevHandler)
 
@@ -143,6 +145,7 @@ private[spark] object SignalUtils extends Logging {
       // res23: Boolean = false
       // ```
       val escalate = actions.asScala.map(action => action()).forall(_ == false)
+      logInfo("axu.print [core/src/main/scala/org/apache/spark/util/SignalUtils.scala] [Debug] === 这里是 ActionHandler 类 override handle 方法 === escalate " + escalate)
       if (escalate) {
         prevHandler.handle(sig)
       }
