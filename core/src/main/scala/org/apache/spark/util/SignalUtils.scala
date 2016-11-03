@@ -29,6 +29,11 @@ import org.apache.spark.internal.Logging
 
 /**
  * Contains utilities for working with posix signals.
+ * 
+ * SignalUtils 类功能说明：
+ * - 1. 根据signal字符串注册对应signal
+ * - 2. 注册针对signal的action方法，返回值必须是布尔型
+ * - 3. 若注册多个signal，那么只有当每个signal的action方法返回值全部为false时，才会按照默认的signal方式执行；否则当捕捉到信号后会忽略信号。
  */
 private[spark] object SignalUtils extends Logging {
 
@@ -47,7 +52,6 @@ private[spark] object SignalUtils extends Logging {
    * INT: 键盘中断
    *
    * sun.misc.Signal 使用说明：http://www.programgo.com/article/58772663037/
-   * 
    * 
    * 
    */
@@ -73,6 +77,10 @@ private[spark] object SignalUtils extends Logging {
    * basis: if a signal is not available or cannot be intercepted, only a warning is emitted.
    *
    * All actions for a given signal are run in a separate thread.
+   *
+   * - 根据signal字符串注册对应signal
+   * - 注册针对signal的action方法，返回值必须是布尔型
+   * - 若注册多个signal，那么只有当每个signal的action方法返回值全部为false时，才会按照默认的signal方式执行；否则当捕捉到信号后会忽略信号。
    */
   def register(signal: String)(action: => Boolean): Unit = synchronized {
     if (SystemUtils.IS_OS_UNIX) {
@@ -85,11 +93,14 @@ private[spark] object SignalUtils extends Logging {
         // 该用法用来完成当 f(k) 这个方法需要很多时间执行的时候：
         //   - 若不使用 getOrElseUpdate 方法，则获取 hm(k) 时，每次都需要执行 f(k)。
         //   - 若使用该方法则，在获取 hm(k) 时，只在第一次执行 f(k)，之后都不需要执行 f(k) 直接获取缓存的值。
-
+        //
+        // 注册signal
         val handler = handlers.getOrElseUpdate(signal, {
           logInfo("Registered signal handler for " + signal)
           new ActionHandler(new Signal(signal))
         })
+
+        // 注册signal的action方法
         handler.register(action)
       } catch {
         case ex: Exception => logWarning(s"Failed to register signal handler for " + signal, ex)
@@ -110,6 +121,8 @@ private[spark] object SignalUtils extends Logging {
      * 声明一个双向链表，内容是一个方法，返回值必须是布尔型。
      *
      * actions: java.util.List[() => Boolean] = []
+     *
+     * 存储信号（signal）的动作方法的返回值（{action}）
      */
     private val actions = Collections.synchronizedList(new java.util.LinkedList[() => Boolean])
 
@@ -119,6 +132,9 @@ private[spark] object SignalUtils extends Logging {
     /**
      * Called when this handler's signal is received. Note that if the same signal is received
      * before this method returns, it is escalated to the previous handler.
+     *
+     * 重写handle方法，捕捉到注册信号后执行该方法。
+     * 只有当注册的signal的action返回值全为false时，才会按照默认信号方式执行；否则会忽略注册信号。
      */
     override def handle(sig: Signal): Unit = {
       logInfo("axu.print [core/src/main/scala/org/apache/spark/util/SignalUtils.scala] [Debug] === 这里是 ActionHandler 类 override handle 方法 === sig " + sig.getName())
@@ -144,9 +160,11 @@ private[spark] object SignalUtils extends Logging {
       // scala> actions.asScala.map(action => action()).forall(_ == false)
       // res23: Boolean = false
       // ```
+      // 只有注册的signal的action均为false时，捕获到信号时才会按照默认方式执行（现为直接退出）
       val escalate = actions.asScala.map(action => action()).forall(_ == false)
       logInfo("axu.print [core/src/main/scala/org/apache/spark/util/SignalUtils.scala] [Debug] === 这里是 ActionHandler 类 override handle 方法 === escalate " + escalate)
       if (escalate) {
+        // 按照信号的默认方式执行
         prevHandler.handle(sig)
       }
 

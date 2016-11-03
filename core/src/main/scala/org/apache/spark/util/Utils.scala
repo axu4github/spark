@@ -2395,6 +2395,9 @@ private[spark] object Utils extends Logging {
   /**
    * Utility function that should be called early in `main()` for daemons to set up some common
    * diagnostic state.
+   * 
+   * 通过sun.misc.Signal，注册 "TERM", "HUP", "INT" 信号
+   * - 由于现在针对这三个信号的action方法返回值均为false，所以当捕获到这三个信号时，会按照信号的默认方式执行（中断）。
    */
   def initDaemon(log: Logger): Unit = {
     System.err.println(s"axu.print [core/src/main/scala/org/apache/spark/util/Utils.scala] [Debug] === 这里是 org.apache.spark.util.Utils.initDaemon 方法 ===")
